@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+*.log
+coverage
+.DS_Store
+Thumbs.db
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+backend/.env
+frontend/.env
+
