@@ -117,6 +117,12 @@ npm run dev
 * `POST /api/admin/cache/refresh` → Refresh cached movies (Admin only)
 * `DELETE /api/admin/movies/:id` → Remove movie from cache (Admin only)
 
+🔐 Admin authentication with JWT
+
+Email: harsh@example.com
+
+Password: ChangeMe123
+
 ---
 
 ## Database Overview
