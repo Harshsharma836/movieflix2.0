@@ -14,23 +14,32 @@ const DEFAULT_SEARCH = 'harry potter';
 export const DiscoverPage = () => {
   const [searchInput, setSearchInput] = useState(DEFAULT_SEARCH);
   const [query, setQuery] = useState(DEFAULT_SEARCH);
-  const [movies, setMovies] = useState([]);
+  const [moviesData, setMoviesData] = useState({
+    movies: [],
+    totalPages: 1,
+    totalResults: 0,
+    availableGenres: [],
+  });
   const [sort, setSort] = useState('');
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const [availableGenres, setAvailableGenres] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const limit = 10;
+
+  const extractGenres = (movies) => {
+    const genres = new Set();
+    movies.forEach((movie) => (movie.genre || []).forEach((g) => genres.add(g)));
+    return Array.from(genres);
+  };
 
   const loadMovies = useCallback(async () => {
     if (!query) return;
     try {
       setLoading(true);
       setError(null);
+
       const response = await fetchMovies({
         search: query,
         sort,
@@ -39,51 +48,51 @@ export const DiscoverPage = () => {
         limit,
       });
 
-      setMovies(response.movies || []);
-      setTotalPages(response.totalPages || 1);
-      setTotalResults(response.totalResultsFromApi || response.total || 0);
-
-      const genres = new Set();
-      (response.movies || []).forEach((movie) => {
-        (movie.genre || []).forEach((genre) => genres.add(genre));
+      const movies = response.movies || [];
+      setMoviesData({
+        movies,
+        totalPages: response.totalPages || 1,
+        totalResults: response.totalResultsFromApi || response.total || 0,
+        availableGenres: extractGenres(movies),
       });
-      setAvailableGenres(Array.from(genres));
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || 'Failed to fetch movies');
     } finally {
       setLoading(false);
     }
-  }, [limit, page, query, selectedGenres, sort]);
+  }, [query, sort, selectedGenres, page, limit]);
 
   useEffect(() => {
     loadMovies();
   }, [loadMovies]);
 
-  const handleSearch = (event) => {
-    event.preventDefault();
+  const handleSearch = useCallback((e) => {
+    e.preventDefault();
     if (!searchInput.trim()) {
       setError('Please enter a search term');
       return;
     }
     setPage(1);
     setQuery(searchInput.trim());
-  };
+  }, [searchInput]);
 
-  const handleGenreChange = (genres) => {
+  const handleGenreChange = useCallback((genres) => {
     setPage(1);
     setSelectedGenres(genres);
-  };
+  }, []);
 
-  const handleSortChange = (value) => {
+  const handleSortChange = useCallback((value) => {
     setPage(1);
     setSort(value);
-  };
+  }, []);
 
   const displayTitle = useMemo(() => {
     if (!query) return 'Discover Movies';
     return `Showing results for “${query}”`;
   }, [query]);
+
+  const { movies, totalPages, totalResults, availableGenres } = moviesData;
 
   return (
     <div className="space-y-10">
@@ -107,7 +116,7 @@ export const DiscoverPage = () => {
               <input
                 type="text"
                 value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search movies by title..."
                 className="w-full rounded-xl border border-white/20 bg-white/10 px-12 py-3 text-base text-white backdrop-blur-md placeholder:text-white/70 focus:border-white focus:ring-2 focus:ring-white/50 outline-none transition"
               />
@@ -127,18 +136,12 @@ export const DiscoverPage = () => {
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{displayTitle}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {loading
-              ? 'Fetching results…'
-              : `Showing ${movies.length} of ${totalResults} result${totalResults === 1 ? '' : 's'}`}
+            {loading ? 'Fetching results…' : `Showing ${movies.length} of ${totalResults} result${totalResults === 1 ? '' : 's'}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <SortSelect value={sort} onChange={handleSortChange} />
-          <GenreFilter
-            selected={selectedGenres}
-            onChange={handleGenreChange}
-            availableGenres={availableGenres}
-          />
+          <GenreFilter selected={selectedGenres} onChange={handleGenreChange} availableGenres={availableGenres} />
           <DownloadCsvButton movies={movies} />
         </div>
       </section>
